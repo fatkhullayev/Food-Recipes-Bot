@@ -1,0 +1,13 @@
+package uz.pdp.foodrecipesbot.bot.models.enums;
+
+public enum BotState {
+    START,
+    WAITING_FOR_PHONE_NUMBER,
+    MAIN_MENU,
+    ADDING_RECIPE_NAME,
+    ADDING_RECIPE_INGREDIENTS,
+    ADDING_RECIPE_DESCRIPTION,
+    ADDING_RECIPE_INSTRUCTIONS,
+    WAITING_FOR_COMMENT,
+    ADDING_RECIPE_CATEGORY
+}

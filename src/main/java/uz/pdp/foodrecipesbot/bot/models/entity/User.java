@@ -1,36 +1,55 @@
+// src/main/java/uz/pdp/foodrecipesbot/bot/models/entity/User.java
+
 package uz.pdp.foodrecipesbot.bot.models.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.experimental.SuperBuilder;
-import uz.pdp.foodrecipesbot.bot.models.base.Auditable;
+import jakarta.persistence.*;
+import lombok.*;
+import uz.pdp.foodrecipesbot.bot.models.enums.BotState;
 
-@Getter
-@Setter
-@SuperBuilder
+import java.util.ArrayList;
+import java.util.List;
+
+@Entity(name = "users")
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
-@Table(name = "bot_users")
-public class User extends Auditable {
+@Builder
+public class User {
     @Id
-    protected Long id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    private Boolean _active;
+    @Column(unique = true, nullable = false)
+    private Long telegramId;
 
-    @Column(name = "full_name")
-    private String fullName;
-
-    private String username;
-
+    private String userName;
+    private String uname;
+    private String phoneNumber;
     private String bio;
 
+    @Enumerated(EnumType.STRING)
+    private BotState botState;
+
+    private Long currentRecipeId;
+
+    @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<Recipe> createdRecipes = new ArrayList<>();
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "user_saved_recipes",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "recipe_id")
+    )
+    private List<Recipe> savedRecipes = new ArrayList<>();
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "user_followers",
+            joinColumns = @JoinColumn(name = "following_id"),
+            inverseJoinColumns = @JoinColumn(name = "follower_id")
+    )
+    private List<User> followers = new ArrayList<>();
+    @ManyToMany(mappedBy = "followers", fetch = FetchType.EAGER)
+    private List<User> following = new ArrayList<>();
 }
-
-

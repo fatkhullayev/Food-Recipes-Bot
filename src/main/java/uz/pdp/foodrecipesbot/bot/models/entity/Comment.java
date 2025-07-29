@@ -1,32 +1,40 @@
+// src/main/java/uz/pdp/foodrecipesbot/bot/models/entity/Comment.java
+
 package uz.pdp.foodrecipesbot.bot.models.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Builder;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
-import uz.pdp.foodrecipesbot.bot.models.base.BaseEntity;
+
+import java.time.LocalDateTime;
 
 @Entity
-@AllArgsConstructor
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
-@Table(name = "comments")
-public class Comment extends BaseEntity {
+@AllArgsConstructor
+@Builder
+public class Comment {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @ManyToOne
-    private Food food;
-
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String text;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    private Boolean isActive = true;
+    @ManyToOne
+    @JoinColumn(name = "recipe_id", nullable = false)
+    private Recipe recipe;
 
-//    @OneToOne(mappedBy = "comment", cascade = CascadeType.ALL)
-//    private CommentReaction commentReaction;
+    private LocalDateTime createdAt;
 
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
 }

@@ -1,19 +1,23 @@
+// src/main/java/uz/pdp/foodrecipesbot/bot/models/entity/Category.java
+
 package uz.pdp.foodrecipesbot.bot.models.entity;
 
-import jakarta.persistence.Entity;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Builder;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
-import uz.pdp.foodrecipesbot.bot.models.base.BaseEntity;
 
 @Entity
-@Getter
-@Setter
-@AllArgsConstructor
+@Data
 @NoArgsConstructor
-public class Category extends BaseEntity {
+@AllArgsConstructor
+@Builder
+public class Category {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
+    @Column(unique = true, nullable = false)
     private String name;
-
 }

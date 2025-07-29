@@ -32,13 +32,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.github.pengrad</groupId>
-            <artifactId>java-telegram-bot-api</artifactId>
-            <version>7.11.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <groupId>org.telegram</groupId>
+            <artifactId>telegrambots-spring-boot-starter</artifactId>
+            <version>6.9.7.1</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -58,6 +54,10 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -68,5 +68,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>
