@@ -3,6 +3,9 @@ package uz.pdp.foodrecipesbot.bot.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -34,15 +37,69 @@ public class RecipeService {
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
 
-    private static String recipeName;
-    private static String recipeIngredients;
-    private static String recipeDesc;
-    private static Category category;
-    private static String recipeInstructions;
+    private String recipeName;
+    private String recipeIngredients;
+    private String recipeDesc;
+    private Category category;
+    private String recipeInstructions;
 
     @Autowired
     @Lazy
     private TelegramBot telegramBot;
+
+    private static final int PAGE_SIZE = 2; // Количество рецептов на странице
+
+    public void sendRecipesByCategory(Long chatId, String categoryName, int page) {
+        Optional<Category> categoryOptional = categoryRepository.findByName(categoryName);
+        if (categoryOptional.isEmpty()) {
+            telegramBot.sendMessage(chatId, "Kechirasiz, bunday kategoriya topilmadi.");
+            return;
+        }
+
+        Category category = categoryOptional.get();
+        Page<Recipe> recipePage = recipeRepository.findByCategory(
+                category,
+                PageRequest.of(page, PAGE_SIZE, Sort.by("id").ascending())
+        );
+
+        List<Recipe> recipes = recipePage.getContent();
+
+        if (recipes.isEmpty()) {
+            telegramBot.sendMessage(chatId, "Afsuski, <b>" + categoryName + "</b> kategoriyasida hozircha retseptlar yo'q.", true);
+            return;
+        }
+
+        // Отправка рецептов
+        for (Recipe recipe : recipes) {
+            String recipeText = formatRecipeText(recipe);
+            SendMessage message = new SendMessage(String.valueOf(chatId), recipeText);
+            message.enableHtml(true);
+            message.setReplyMarkup(KeyboardUtil.getRecipeActionInlineKeyboard(recipe.getId(), recipe.getAuthor().getId()));
+            telegramBot.executeMessage(message);
+        }
+
+        // Добавляем кнопки пагинации
+        if (recipePage.getTotalPages() > 1) {
+            SendMessage paginationMessage = new SendMessage(String.valueOf(chatId), "Sahifa " + (page + 1) + " / " + recipePage.getTotalPages());
+            paginationMessage.setReplyMarkup(KeyboardUtil.getPaginationKeyboard(categoryName, page, recipePage.getTotalPages()));
+            telegramBot.executeMessage(paginationMessage);
+        }
+    }
+
+    private String formatRecipeText(Recipe recipe) {
+        return String.format(
+                "<b>Retsept nomi:</b> %s\n\n" +
+                        "<b>Tavsif:</b> %s\n\n" +
+                        "<b>Masalliqlar:</b> %s\n\n" +
+                        "<b>Tayyorlanishi:</b> %s\n\n" +
+                        "<i>Muallif: %s</i>",
+                recipe.getName(),
+                recipe.getDescription(),
+                recipe.getIngredients(),
+                recipe.getInstructions(),
+                recipe.getAuthor().getUserName()
+        );
+    }
 
     public void sendCategoriesInlineKeyboard(Long chatId) {
         List<String> categoryNames = categoryRepository.findAll().stream()
@@ -97,7 +154,6 @@ public class RecipeService {
         telegramBot.sendMessage(chatId, "Yangi retsept qo'shishni boshlaymiz!\n\nRetsept nomini kiriting:");
     }
 
-    @Transactional
     public void handleRecipeName(Long chatId, String name, User user) {
         if (name == null || name.trim().isEmpty()) {
             telegramBot.sendMessage(chatId, "Retsept nomi bo'sh bo'lishi mumkin emas. Iltimos, retsept nomini kiriting:");
@@ -153,7 +209,6 @@ public class RecipeService {
     }
 
 
-    @Transactional
     public void handleRecipeIngredients(Long chatId, String ingredients, User user) {
 //        Long currentRecipeId = user.getCurrentRecipeId();
 //        if (currentRecipeId == null) {
@@ -183,7 +238,6 @@ public class RecipeService {
         telegramBot.sendMessage(chatId, "Retsept tavsifini kiriting:");
     }
 
-    @Transactional
     public void handleRecipeDescription(Long chatId, String description, User user) {
 //        Long currentRecipeId = user.getCurrentRecipeId();
 //        if (currentRecipeId == null) {
@@ -232,7 +286,6 @@ public class RecipeService {
     }
 
 
-    @Transactional
     public void handleRecipeInstructions(Long chatId, String instructions, User user) {
 //        Long currentRecipeId = user.getCurrentRecipeId();
 //        if (currentRecipeId == null) {
@@ -256,17 +309,18 @@ public class RecipeService {
                     return categoryRepository.save(generalCategory);
                 });*/
 
+        user.setBotState(BotState.MAIN_MENU);
+//        user.setCurrentRecipeId(null);
+        User savedUser = userRepository.save(user);
+
         Recipe recipe = new Recipe();
         recipe.setName(recipeName);
         recipe.setIngredients(recipeIngredients);
         recipe.setDescription(recipeDesc);
         recipe.setInstructions(instructions);
-        recipe.setAuthor(user);
+        recipe.setAuthor(savedUser);
         recipe.setCategory(category);
         recipeRepository.save(recipe);
-        user.setBotState(BotState.MAIN_MENU);
-        user.setCurrentRecipeId(null);
-        userRepository.save(user);
 
         telegramBot.sendMessage(chatId, "🎉 Retsept muvaffaqiyatli qo'shildi! Endi uni Retseplar ko'rish bo'limidan topishingiz mumkin.");
         telegramBot.sendMainMenu(chatId);
@@ -279,7 +333,6 @@ public class RecipeService {
         telegramBot.sendMessage(chatId, "Iltimos, izohingizni kiriting:");
     }
 
-    @Transactional
     public void saveComment(Long chatId, String commentText, User user) {
         Long currentRecipeId = user.getCurrentRecipeId();
         if (currentRecipeId == null) {
@@ -338,7 +391,6 @@ public class RecipeService {
         telegramBot.executeMessage(message);
     }
 
-    @Transactional
     public void saveRecipeForUser(Long chatId, User user, Long recipeId) {
         Optional<Recipe> recipeOptional = recipeRepository.findById(recipeId);
         if (recipeOptional.isPresent()) {

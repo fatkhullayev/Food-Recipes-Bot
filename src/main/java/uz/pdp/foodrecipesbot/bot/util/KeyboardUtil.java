@@ -52,6 +52,44 @@ public class KeyboardUtil {
         return keyboardMarkup;
     }
 
+    public static InlineKeyboardMarkup getPaginationKeyboard(String categoryName, int currentPage, int totalPages) {
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+        List<InlineKeyboardButton> paginationRow = new ArrayList<>();
+
+        // Кнопка "Назад"
+        if (currentPage > 0) {
+            paginationRow.add(InlineKeyboardButton.builder()
+                    .text("⬅️ Oldingi")
+                    .callbackData("PAGE_" + categoryName + "_" + (currentPage - 1))
+                    .build());
+        }
+
+        // Кнопка "Вперед"
+        if (currentPage < totalPages - 1) {
+            paginationRow.add(InlineKeyboardButton.builder()
+                    .text("Keyingi ➡️")
+                    .callbackData("PAGE_" + categoryName + "_" + (currentPage + 1))
+                    .build());
+        }
+
+        if (!paginationRow.isEmpty()) {
+            rows.add(paginationRow);
+        }
+
+        // Кнопка возврата к категориям
+        rows.add(Collections.singletonList(
+                InlineKeyboardButton.builder()
+                        .text("🔙 Kategoriyalarga qaytish")
+                        .callbackData("BACK_TO_CATEGORIES")
+                        .build()
+        ));
+
+        markup.setKeyboard(rows);
+        return markup;
+    }
+
     public static ReplyKeyboardMarkup getCategoriesList(List<String> categories) {
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
         List<KeyboardRow> keyboard = new ArrayList<>();

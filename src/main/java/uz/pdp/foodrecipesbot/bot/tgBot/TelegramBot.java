@@ -37,7 +37,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private String botToken;
 
     private final UserService userService;
-    private final RecipeService recipeService;
+    private final @Lazy RecipeService recipeService;
 
     public TelegramBot(UserService userService, RecipeService recipeService) {
         this.userService = userService;
@@ -192,14 +192,23 @@ public class TelegramBot extends TelegramLongPollingBot {
 
 
     private void handleCallbackQuery(Update update) {
+
         Long chatId = update.getCallbackQuery().getMessage().getChatId();
         String callbackData = update.getCallbackQuery().getData();
-        // Integer messageId = update.getCallbackQuery().getMessage().getMessageId(); // Agar kerak bo'lsa
         User user = userService.getOrCreateUser(chatId, update.getCallbackQuery().getFrom().getFirstName());
 
         if (callbackData.startsWith("CAT_")) {
             String categoryName = callbackData.substring(4);
-            recipeService.sendRecipesByCategory(chatId, categoryName);
+            recipeService.sendRecipesByCategory(chatId, categoryName, 0); // Начинаем с первой страницы
+        }
+        else if (callbackData.startsWith("PAGE_")) {
+            String[] parts = callbackData.split("_");
+            String categoryName = parts[1];
+            int page = Integer.parseInt(parts[2]);
+            recipeService.sendRecipesByCategory(chatId, categoryName, page);
+        }
+        else if (callbackData.equals("BACK_TO_CATEGORIES")) {
+            recipeService.sendCategoriesInlineKeyboard(chatId);
         } else if (callbackData.startsWith("RECIPE_COMMENT_")) {
             Long recipeId = Long.parseLong(callbackData.substring("RECIPE_COMMENT_".length()));
             recipeService.promptForComment(chatId, recipeId, user);
