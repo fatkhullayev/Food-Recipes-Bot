@@ -34,6 +34,11 @@ public class RecipeService {
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
 
+    private static String recipeName;
+    private static String recipeIngredients;
+    private static String recipeDesc;
+    private static String recipeInstructions;
+
     @Autowired
     @Lazy
     private TelegramBot telegramBot;
@@ -108,15 +113,23 @@ public class RecipeService {
                         return categoryRepository.save(generalCategory);
                     });
 
-            recipe = Recipe.builder()
-                    .author(user)
-                    .category(defaultCategory)
-                    .name(name.trim())
-                    .build();
+//            recipe = Recipe.builder()
+//                    .author(user)
+//                    .category(defaultCategory)
+//                    .name(name.trim())
+//                    .build();
 
-            Recipe savedRecipe = recipeRepository.save(recipe);
+//            recipe = new Recipe();
+//            recipe.setCategory(defaultCategory);
+//            recipe.setName(name);
+//            recipe.setAuthor(user);
+//
+//            Recipe savedRecipe = recipeRepository.save(recipe);
+//            System.out.println("savedRecipe.getId() = " + savedRecipe.getId());
+//            user.setCurrentRecipeId(savedRecipe.getId());
 
-            user.setCurrentRecipeId(savedRecipe.getId());
+            recipeName = name;
+
             user.setBotState(BotState.ADDING_RECIPE_INGREDIENTS);
             userRepository.save(user);
 
@@ -133,7 +146,7 @@ public class RecipeService {
             userRepository.save(user);
         }
 
-        recipeRepository.save(recipe);
+//        recipeRepository.save(recipe);
 
         telegramBot.sendMessage(chatId, "Masalliqlarni kiriting (har birini yangi qatordan yoki vergul bilan ajratib yozing):");
     }
@@ -141,72 +154,91 @@ public class RecipeService {
 
     @Transactional
     public void handleRecipeIngredients(Long chatId, String ingredients, User user) {
-        Long currentRecipeId = user.getCurrentRecipeId();
-        if (currentRecipeId == null) {
-            telegramBot.sendMessage(chatId, "Xatolik: Retseptni aniqlab bo'lmadi.");
-            user.setBotState(BotState.MAIN_MENU);
-            userRepository.save(user);
-            return;
-        }
-        Recipe recipe = recipeRepository.findById(currentRecipeId).orElse(null);
-        if (recipe == null) {
-            telegramBot.sendMessage(chatId, "Xatolik: Retsept topilmadi.");
-            user.setBotState(BotState.MAIN_MENU);
-            userRepository.save(user);
-            return;
-        }
-
+//        Long currentRecipeId = user.getCurrentRecipeId();
+//        if (currentRecipeId == null) {
+//            telegramBot.sendMessage(chatId, "Xatolik: Retseptni aniqlab bo'lmadi.");
+//            user.setBotState(BotState.MAIN_MENU);
+//            userRepository.save(user);
+//            return;
+//        }
+//        Recipe recipe = recipeRepository.findById(currentRecipeId).orElse(null);
+//        if (recipe == null) {
+//            telegramBot.sendMessage(chatId, "Xatolik: Retsept topilmadi.");
+//            user.setBotState(BotState.MAIN_MENU);
+//            userRepository.save(user);
+//            return;
+//        }
+//        System.out.println("recipe.getName() = " + recipe.getName());
 
         user.setBotState(BotState.ADDING_RECIPE_DESCRIPTION);
-        System.out.println("");
-        recipe.setIngredients(ingredients);
-        recipeRepository.save(recipe);
+        System.out.println("ingredients = " + ingredients);
+//        System.out.println("recipe.getIngredients() = " + recipe.getIngredients());
+//        recipe.setIngredients(ingredients);
+//        System.out.println("recipe.getIngredients() = " + recipe.getIngredients());
+//
+//        recipeRepository.save(recipe);
+        recipeIngredients = ingredients;
         userRepository.save(user);
         telegramBot.sendMessage(chatId, "Retsept tavsifini kiriting:");
     }
+
     @Transactional
     public void handleRecipeDescription(Long chatId, String description, User user) {
-        Long currentRecipeId = user.getCurrentRecipeId();
-        if (currentRecipeId == null) {
-            telegramBot.sendMessage(chatId, "Xatolik: Retseptni aniqlab bo'lmadi.");
-            user.setBotState(BotState.MAIN_MENU);
-            userRepository.save(user);
-            return;
-        }
-        Recipe recipe = recipeRepository.findById(currentRecipeId).orElse(null);
-        if (recipe == null) {
-            telegramBot.sendMessage(chatId, "Xatolik: Retsept topilmadi.");
-            user.setBotState(BotState.MAIN_MENU);
-            userRepository.save(user);
-            return;
-        }
-
-        recipe.setDescription(description);
+//        Long currentRecipeId = user.getCurrentRecipeId();
+//        if (currentRecipeId == null) {
+//            telegramBot.sendMessage(chatId, "Xatolik: Retseptni aniqlab bo'lmadi.");
+//            user.setBotState(BotState.MAIN_MENU);
+//            userRepository.save(user);
+//            return;
+//        }
+//        Recipe recipe = recipeRepository.findById(currentRecipeId).orElse(null);
+//        if (recipe == null) {
+//            telegramBot.sendMessage(chatId, "Xatolik: Retsept topilmadi.");
+//            user.setBotState(BotState.MAIN_MENU);
+//            userRepository.save(user);
+//            return;
+//        }
+//
+//        recipe.setDescription(description);
+        recipeDesc = description;
         user.setBotState(BotState.ADDING_RECIPE_INSTRUCTIONS);
         userRepository.save(user);
-        recipeRepository.save(recipe);
+//        recipeRepository.save(recipe);
         telegramBot.sendMessage(chatId, "Tayyorlash bosqichlarini kiriting (har bir bosqichni yangi qatordan yozing):");
     }
 
 
     @Transactional
     public void handleRecipeInstructions(Long chatId, String instructions, User user) {
-        Long currentRecipeId = user.getCurrentRecipeId();
-        if (currentRecipeId == null) {
-            telegramBot.sendMessage(chatId, "Xatolik: Retseptni aniqlab bo'lmadi.");
-            user.setBotState(BotState.MAIN_MENU);
-            userRepository.save(user);
-            return;
-        }
-        Recipe recipe = recipeRepository.findById(currentRecipeId).orElse(null);
-        if (recipe == null) {
-            telegramBot.sendMessage(chatId, "Xatolik: Retsept topilmadi.");
-            user.setBotState(BotState.MAIN_MENU);
-            userRepository.save(user);
-            return;
-        }
+//        Long currentRecipeId = user.getCurrentRecipeId();
+//        if (currentRecipeId == null) {
+//            telegramBot.sendMessage(chatId, "Xatolik: Retseptni aniqlab bo'lmadi.");
+//            user.setBotState(BotState.MAIN_MENU);
+//            userRepository.save(user);
+//            return;
+//        }
+//        Recipe recipe = recipeRepository.findById(currentRecipeId).orElse(null);
+//        if (recipe == null) {
+//            telegramBot.sendMessage(chatId, "Xatolik: Retsept topilmadi.");
+//            user.setBotState(BotState.MAIN_MENU);
+//            userRepository.save(user);
+//            return;
+//        }
+//
+//        recipe.setInstructions(instructions);
+        Category defaultCategory = categoryRepository.findByName("General")
+                .orElseGet(() -> {
+                    Category generalCategory = Category.builder().name("General").build();
+                    return categoryRepository.save(generalCategory);
+                });
 
+        Recipe recipe = new Recipe();
+        recipe.setName(recipeName);
+        recipe.setIngredients(recipeIngredients);
+        recipe.setDescription(recipeDesc);
         recipe.setInstructions(instructions);
+        recipe.setAuthor(user);
+        recipe.setCategory(defaultCategory);
         recipeRepository.save(recipe);
         user.setBotState(BotState.MAIN_MENU);
         user.setCurrentRecipeId(null);

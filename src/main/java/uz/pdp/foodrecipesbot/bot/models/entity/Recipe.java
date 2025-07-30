@@ -23,13 +23,13 @@ public class Recipe {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = true)
+//    @Column(nullable = true)
     private String ingredients;
 
-    @Column(nullable = true)
+//    @Column(nullable = true)
     private String description;
 
-    @Column(nullable = true)
+//    @Column(nullable = true)
     private String instructions;
 
     @ManyToOne
