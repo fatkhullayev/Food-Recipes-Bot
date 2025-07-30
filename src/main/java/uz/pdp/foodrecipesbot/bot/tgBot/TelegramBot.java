@@ -114,6 +114,8 @@ public class TelegramBot extends TelegramLongPollingBot {
             case ADDING_RECIPE_INSTRUCTIONS:
                 recipeService.handleRecipeInstructions(chatId, messageText, user);
                 break;
+            case ADDING_RECIPE_CATEGORY:
+                recipeService.handleRecipeCategory
             case WAITING_FOR_COMMENT:
                 recipeService.saveComment(chatId, messageText, user);
                 // Comment saqlangandan keyin holatni MAIN_MENU ga o'tkazish va menyuni ko'rsatish

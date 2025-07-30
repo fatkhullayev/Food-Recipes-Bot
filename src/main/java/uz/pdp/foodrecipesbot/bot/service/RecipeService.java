@@ -207,6 +207,19 @@ public class RecipeService {
         telegramBot.sendMessage(chatId, "Tayyorlash bosqichlarini kiriting (har bir bosqichni yangi qatordan yozing):");
     }
 
+    public void handleRecipeCategories(Long chatId, User user){
+        List<String> categoryNames = categoryRepository.findAll().stream()
+                .map(Category::getName)
+                .toList();
+        if (categoryNames.isEmpty()) {
+            telegramBot.sendMessage(chatId, "Hozircha hech qanday kategoriya mavjud emas.");
+            return;
+        }
+        SendMessage message = new SendMessage(String.valueOf(chatId), "Recipega mos bo'lgan kategoriyani tanlab oling:");
+        message.setReplyMarkup(KeyboardUtil.getCategoriesInlineKeyboard(categoryNames));
+        telegramBot.executeMessage(message);
+    }
+
 
     @Transactional
     public void handleRecipeInstructions(Long chatId, String instructions, User user) {
@@ -226,11 +239,11 @@ public class RecipeService {
 //        }
 //
 //        recipe.setInstructions(instructions);
-        Category defaultCategory = categoryRepository.findByName("General")
+       /* Category defaultCategory = categoryRepository.findByName("General")
                 .orElseGet(() -> {
                     Category generalCategory = Category.builder().name("General").build();
                     return categoryRepository.save(generalCategory);
-                });
+                });*/
 
         Recipe recipe = new Recipe();
         recipe.setName(recipeName);
@@ -238,7 +251,7 @@ public class RecipeService {
         recipe.setDescription(recipeDesc);
         recipe.setInstructions(instructions);
         recipe.setAuthor(user);
-        recipe.setCategory(defaultCategory);
+        recipe.setCategory();
         recipeRepository.save(recipe);
         user.setBotState(BotState.MAIN_MENU);
         user.setCurrentRecipeId(null);
@@ -247,6 +260,7 @@ public class RecipeService {
         telegramBot.sendMessage(chatId, "🎉 Retsept muvaffaqiyatli qo'shildi! Endi uni Retseplar ko'rish bo'limidan topishingiz mumkin.");
         telegramBot.sendMainMenu(chatId);
     }
+
     public void promptForComment(Long chatId, Long recipeId, User user) {
         user.setCurrentRecipeId(recipeId);
         user.setBotState(BotState.WAITING_FOR_COMMENT);
