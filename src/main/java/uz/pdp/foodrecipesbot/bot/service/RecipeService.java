@@ -37,6 +37,7 @@ public class RecipeService {
     private static String recipeName;
     private static String recipeIngredients;
     private static String recipeDesc;
+    private static Category category;
     private static String recipeInstructions;
 
     @Autowired
@@ -201,13 +202,10 @@ public class RecipeService {
 //
 //        recipe.setDescription(description);
         recipeDesc = description;
-        user.setBotState(BotState.ADDING_RECIPE_INSTRUCTIONS);
+        user.setBotState(BotState.ADDING_RECIPE_CATEGORY);
         userRepository.save(user);
 //        recipeRepository.save(recipe);
-        telegramBot.sendMessage(chatId, "Tayyorlash bosqichlarini kiriting (har bir bosqichni yangi qatordan yozing):");
-    }
 
-    public void handleRecipeCategories(Long chatId, User user){
         List<String> categoryNames = categoryRepository.findAll().stream()
                 .map(Category::getName)
                 .toList();
@@ -216,8 +214,21 @@ public class RecipeService {
             return;
         }
         SendMessage message = new SendMessage(String.valueOf(chatId), "Recipega mos bo'lgan kategoriyani tanlab oling:");
-        message.setReplyMarkup(KeyboardUtil.getCategoriesInlineKeyboard(categoryNames));
+        message.setReplyMarkup(KeyboardUtil.getCategoriesList(categoryNames));
         telegramBot.executeMessage(message);
+    }
+
+    public void handleRecipeCategory(Long chatId, String categoryName,User user){
+
+        Optional<Category> categoryRepositoryByName = categoryRepository.findByName(categoryName);
+        if (categoryRepositoryByName.isEmpty()) {
+            telegramBot.sendMessage(chatId, "Xatolik: Retseptni aniqlab bo'lmadi.");
+        }
+        category = categoryRepositoryByName.get();
+        user.setBotState(BotState.ADDING_RECIPE_INSTRUCTIONS);
+        userRepository.save(user);
+//        telegramBot.executeMessage(message);
+        telegramBot.sendMessage(chatId, "Tayyorlash bosqichlarini kiriting (har bir bosqichni yangi qatordan yozing):");
     }
 
 
@@ -251,7 +262,7 @@ public class RecipeService {
         recipe.setDescription(recipeDesc);
         recipe.setInstructions(instructions);
         recipe.setAuthor(user);
-        recipe.setCategory();
+        recipe.setCategory(category);
         recipeRepository.save(recipe);
         user.setBotState(BotState.MAIN_MENU);
         user.setCurrentRecipeId(null);

@@ -7,6 +7,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
+import uz.pdp.foodrecipesbot.bot.models.entity.Category;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -45,6 +46,21 @@ public class KeyboardUtil {
         row3.add("Notifications");
         row3.add("Saqlangan retseplar");
         keyboard.add(row3);
+
+        keyboardMarkup.setKeyboard(keyboard);
+        keyboardMarkup.setResizeKeyboard(true);
+        return keyboardMarkup;
+    }
+
+    public static ReplyKeyboardMarkup getCategoriesList(List<String> categories) {
+        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+        List<KeyboardRow> keyboard = new ArrayList<>();
+
+        for (String category : categories) {
+            KeyboardRow row = new KeyboardRow();
+            row.add(category);
+            keyboard.add(row);
+        }
 
         keyboardMarkup.setKeyboard(keyboard);
         keyboardMarkup.setResizeKeyboard(true);
