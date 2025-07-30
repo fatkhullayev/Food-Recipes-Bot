@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/food-recipe-bot-base
+    url: jdbc:postgresql://localhost:5433/db
     username: postgres
-    password: root777
+    password: postgres
   jpa:
     hibernate:
       ddl-auto: update
