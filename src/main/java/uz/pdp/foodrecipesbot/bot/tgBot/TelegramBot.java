@@ -4,17 +4,27 @@ package uz.pdp.foodrecipesbot.bot.tgBot;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
+import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
+import org.telegram.telegrambots.meta.api.objects.File;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
+import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
+import uz.pdp.foodrecipesbot.bot.models.entity.Category;
 import uz.pdp.foodrecipesbot.bot.models.enums.BotState; // To'g'ri paketni import qiling
+import uz.pdp.foodrecipesbot.bot.repository.CategoryRepository;
 import uz.pdp.foodrecipesbot.bot.service.UserService;
 import uz.pdp.foodrecipesbot.bot.service.RecipeService;
 import uz.pdp.foodrecipesbot.bot.util.KeyboardUtil;
@@ -23,12 +33,19 @@ import uz.pdp.foodrecipesbot.bot.models.entity.User; // To'g'ri paketni import q
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 
+import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.util.List;
+
 @Slf4j
 @Component
 @Getter
 @Setter
 @Lazy
 public class TelegramBot extends TelegramLongPollingBot {
+    private final CategoryRepository categoryRepository;
 
     @Value("${telegram.bot.username}")
     private String botUsername;
@@ -39,9 +56,11 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final UserService userService;
     private final @Lazy RecipeService recipeService;
 
-    public TelegramBot(UserService userService, RecipeService recipeService) {
+    public TelegramBot(UserService userService, RecipeService recipeService,
+                       CategoryRepository categoryRepository) {
         this.userService = userService;
         this.recipeService = recipeService;
+        this.categoryRepository = categoryRepository;
     }
 
     @EventListener(ContextRefreshedEvent.class)
@@ -117,6 +136,9 @@ public class TelegramBot extends TelegramLongPollingBot {
             case ADDING_RECIPE_CATEGORY:
                 recipeService.handleRecipeCategory(chatId, messageText, user);
                 break;
+            case ADDING_RECIPE_PHOTO:
+                recipeService.handleRecipePhotoRequest(chatId, update, user);
+                break;
             case WAITING_FOR_COMMENT:
                 recipeService.saveComment(chatId, messageText, user);
                 // Comment saqlangandan keyin holatni MAIN_MENU ga o'tkazish va menyuni ko'rsatish
@@ -189,26 +211,54 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    public void editMessage(Long chatId, Integer messageId, String text, InlineKeyboardMarkup keyboard) {
+        EditMessageText message = new EditMessageText();
+        message.setChatId(chatId.toString());
+        message.setMessageId(messageId);
+        message.setText(text);
+        message.enableHtml(true);
+        message.setReplyMarkup(keyboard);
 
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            log.error("Xabarni tahrirlashda xato: " + e.getMessage());
+        }
+    }
+
+    public void sendMessageWithKeyboard(Long chatId, String text, InlineKeyboardMarkup keyboard) {
+        SendMessage message = new SendMessage(chatId.toString(), text);
+        message.enableHtml(true);
+        message.setReplyMarkup(keyboard);
+        executeMessage(message);
+    }
 
     private void handleCallbackQuery(Update update) {
 
         Long chatId = update.getCallbackQuery().getMessage().getChatId();
+        Integer messageId = update.getCallbackQuery().getMessage().getMessageId(); // Получаем ID сообщения
         String callbackData = update.getCallbackQuery().getData();
         User user = userService.getOrCreateUser(chatId, update.getCallbackQuery().getFrom().getFirstName());
 
         if (callbackData.startsWith("CAT_")) {
             String categoryName = callbackData.substring(4);
-            recipeService.sendRecipesByCategory(chatId, categoryName, 0); // Начинаем с первой страницы
+            recipeService.sendRecipesByCategory(chatId, categoryName, 0, messageId); // Передаем messageId
         }
         else if (callbackData.startsWith("PAGE_")) {
             String[] parts = callbackData.split("_");
             String categoryName = parts[1];
             int page = Integer.parseInt(parts[2]);
-            recipeService.sendRecipesByCategory(chatId, categoryName, page);
+            recipeService.sendRecipesByCategory(chatId, categoryName, page, messageId); // Передаем messageId
         }
         else if (callbackData.equals("BACK_TO_CATEGORIES")) {
-            recipeService.sendCategoriesInlineKeyboard(chatId);
+            // Обработка возврата к категориям
+            List<String> categoryNames = categoryRepository.findAll().stream()
+                    .map(Category::getName)
+                    .toList();
+
+            SendMessage message = new SendMessage(chatId.toString(), "Kategoriyalar:");
+            message.setReplyMarkup(KeyboardUtil.getCategoriesInlineKeyboard(categoryNames));
+            executeMessage(message);
         } else if (callbackData.startsWith("RECIPE_COMMENT_")) {
             Long recipeId = Long.parseLong(callbackData.substring("RECIPE_COMMENT_".length()));
             recipeService.promptForComment(chatId, recipeId, user);
@@ -245,5 +295,32 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+//    public InputStream downloadFileAsStream(String fileId) throws TelegramApiException {
+//        GetFile getFileMethod = new GetFile();
+//        getFileMethod.setFileId(fileId);
+//        org.telegram.telegrambots.meta.api.objects.File file = execute(getFileMethod);
+//        return super.downloadFileAsStream(file.); // ✅ вызов метода родителя
+//    }
+
+    @SneakyThrows
+    public byte[] downloadFileBytes(String fileId) throws TelegramApiException {
+        // Получаем информацию о файле
+        GetFile getFile = new GetFile(fileId);
+        File file = execute(getFile);
+
+        // Скачиваем файл во временный файл
+        java.io.File downloadedFile = downloadFile(file);
+
+        // Читаем байты
+        return Files.readAllBytes(downloadedFile.toPath());
+    }
+
+    public void sendPhoto(Long chatId, byte[] photoBytes, String caption) throws TelegramApiException {
+        SendPhoto sendPhoto = new SendPhoto();
+        sendPhoto.setChatId(chatId.toString());
+        sendPhoto.setPhoto(new InputFile(new ByteArrayInputStream(photoBytes), "recipe.jpg"));
+        sendPhoto.setCaption(caption);
+        execute(sendPhoto);
+    }
 
 }
