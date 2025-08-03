@@ -9,20 +9,20 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.PhotoSize;
+import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import uz.pdp.foodrecipesbot.bot.models.entity.*;
+import uz.pdp.foodrecipesbot.bot.repository.*;
 import uz.pdp.foodrecipesbot.bot.tgBot.TelegramBot;
-import uz.pdp.foodrecipesbot.bot.models.entity.Category;
-import uz.pdp.foodrecipesbot.bot.models.entity.Comment;
-import uz.pdp.foodrecipesbot.bot.models.entity.Recipe;
-import uz.pdp.foodrecipesbot.bot.models.entity.User;
 import uz.pdp.foodrecipesbot.bot.models.enums.BotState;
-import uz.pdp.foodrecipesbot.bot.repository.CategoryRepository;
-import uz.pdp.foodrecipesbot.bot.repository.CommentRepository;
-import uz.pdp.foodrecipesbot.bot.repository.RecipeRepository;
-import uz.pdp.foodrecipesbot.bot.repository.UserRepository;
 import uz.pdp.foodrecipesbot.bot.util.KeyboardUtil;
 
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -41,53 +41,86 @@ public class RecipeService {
     private String recipeIngredients;
     private String recipeDesc;
     private Category category;
-    private String recipeInstructions;
+    private Attachment recipePhoto;
 
     @Autowired
     @Lazy
     private TelegramBot telegramBot;
 
     private static final int PAGE_SIZE = 2; // Количество рецептов на странице
+    private final AttachmentRepository attachmentRepository;
 
-    public void sendRecipesByCategory(Long chatId, String categoryName, int page) {
-        Optional<Category> categoryOptional = categoryRepository.findByName(categoryName);
-        if (categoryOptional.isEmpty()) {
-            telegramBot.sendMessage(chatId, "Kechirasiz, bunday kategoriya topilmadi.");
-            return;
+//    public void sendRecipesByCategory(Long chatId, String categoryName, int page) {
+//        Optional<Category> categoryOptional = categoryRepository.findByName(categoryName);
+//        if (categoryOptional.isEmpty()) {
+//            telegramBot.sendMessage(chatId, "Kechirasiz, bunday kategoriya topilmadi.");
+//            return;
+//        }
+//
+//        Category category = categoryOptional.get();
+//        Page<Recipe> recipePage = recipeRepository.findByCategory(
+//                category,
+//                PageRequest.of(page, PAGE_SIZE, Sort.by("id").ascending())
+//        );
+//
+//        List<Recipe> recipes = recipePage.getContent();
+//
+//        if (recipes.isEmpty()) {
+//            telegramBot.sendMessage(chatId, "Afsuski, <b>" + categoryName + "</b> kategoriyasida hozircha retseptlar yo'q.", true);
+//            return;
+//        }
+//
+//        int index = 1;
+//        // Отправка рецептов
+//        for (Recipe recipe : recipes) {
+//            String recipeText = formatRecipeText(recipe,index++);
+//            SendMessage message = new SendMessage(String.valueOf(chatId), recipeText);
+//            message.enableHtml(true);
+//            message.setReplyMarkup(KeyboardUtil.getRecipeActionInlineKeyboard(recipe.getId(), recipe.getAuthor().getId()));
+//            telegramBot.executeMessage(message);
+//        }
+//
+//        // Добавляем кнопки пагинации
+//        if (recipePage.getTotalPages() > 1) {
+//            SendMessage paginationMessage = new SendMessage(String.valueOf(chatId), "Sahifa " + (page + 1) + " / " + recipePage.getTotalPages());
+//            paginationMessage.setReplyMarkup(KeyboardUtil.getPaginationKeyboard(categoryName, page, recipePage.getTotalPages()));
+//            telegramBot.executeMessage(paginationMessage);
+//        }
+//    }
+//
+//    private String formatRecipeText(Recipe recipe, int index) {
+//        return String.format(
+//                "<b>%d. Retsept nomi:</b> %s\n\n" +
+//                        "<b>Tavsif:</b> %s\n\n" +
+//                        "<b>Masalliqlar:</b> %s\n\n" +
+//                        "<b>Tayyorlanishi:</b> %s\n\n" +
+//                        "<i>Muallif: %s</i>\n" +
+//                        "────────────────────",
+//                index,
+//                recipe.getName(),
+//                recipe.getDescription(),
+//                recipe.getIngredients(),
+//                recipe.getInstructions(),
+//                recipe.getAuthor().getUserName()
+//        );
+//    }
+//
+    public void sendRecipeWithPhoto(Long chatId, Recipe recipe, int index) {
+        // Сначала отправляем фото
+        if (recipe.getAttachment() != null && recipe.getAttachment().getFile() != null) {
+            try {
+                telegramBot.sendPhoto(
+                        chatId,
+                        recipe.getAttachment().getFile(),
+                        ""
+                );
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
-        Category category = categoryOptional.get();
-        Page<Recipe> recipePage = recipeRepository.findByCategory(
-                category,
-                PageRequest.of(page, PAGE_SIZE, Sort.by("id").ascending())
-        );
-
-        List<Recipe> recipes = recipePage.getContent();
-
-        if (recipes.isEmpty()) {
-            telegramBot.sendMessage(chatId, "Afsuski, <b>" + categoryName + "</b> kategoriyasida hozircha retseptlar yo'q.", true);
-            return;
-        }
-
-        // Отправка рецептов
-        for (Recipe recipe : recipes) {
-            String recipeText = formatRecipeText(recipe);
-            SendMessage message = new SendMessage(String.valueOf(chatId), recipeText);
-            message.enableHtml(true);
-            message.setReplyMarkup(KeyboardUtil.getRecipeActionInlineKeyboard(recipe.getId(), recipe.getAuthor().getId()));
-            telegramBot.executeMessage(message);
-        }
-
-        // Добавляем кнопки пагинации
-        if (recipePage.getTotalPages() > 1) {
-            SendMessage paginationMessage = new SendMessage(String.valueOf(chatId), "Sahifa " + (page + 1) + " / " + recipePage.getTotalPages());
-            paginationMessage.setReplyMarkup(KeyboardUtil.getPaginationKeyboard(categoryName, page, recipePage.getTotalPages()));
-            telegramBot.executeMessage(paginationMessage);
-        }
-    }
-
-    private String formatRecipeText(Recipe recipe) {
-        return String.format(
+        // Затем отправляем текст рецепта
+        String recipeText = String.format(
                 "<b>Retsept nomi:</b> %s\n\n" +
                         "<b>Tavsif:</b> %s\n\n" +
                         "<b>Masalliqlar:</b> %s\n\n" +
@@ -99,7 +132,81 @@ public class RecipeService {
                 recipe.getInstructions(),
                 recipe.getAuthor().getUserName()
         );
+
+        SendMessage message = new SendMessage(String.valueOf(chatId), recipeText);
+        message.enableHtml(true);
+        message.setReplyMarkup(KeyboardUtil.getRecipeActionInlineKeyboard(recipe.getId(), recipe.getAuthor().getId()));
+        telegramBot.executeMessage(message);
     }
+
+    public void sendRecipesByCategory(Long chatId, String categoryName, int page, Integer messageId) {
+        Optional<Category> categoryOptional = categoryRepository.findByName(categoryName);
+        if (categoryOptional.isEmpty()) {
+            telegramBot.sendMessage(chatId, "Kechirasiz, bunday kategoriya topilmadi.");
+            return;
+        }
+
+        Category category = categoryOptional.get();
+        Page<Recipe> recipePage = recipeRepository.findPageByCategory(
+                category,
+                PageRequest.of(page, PAGE_SIZE, Sort.by("id").ascending())
+        );
+
+        List<Recipe> recipes = recipePage.getContent();
+
+        if (recipes.isEmpty()) {
+            telegramBot.sendMessage(chatId, "Afsuski, <b>" + categoryName + "</b> kategoriyasida hozircha retseptlar yo'q.", true);
+            return;
+        }
+
+        // Формируем текст с информацией о странице
+        String messageText = "<b>" + categoryName + "</b> kategoriyasidagi retseptlar:\n\n";
+        messageText += "Sahifa " + (page + 1) + " / " + recipePage.getTotalPages();
+
+        // Создаем клавиатуру с названиями рецептов и пагинацией
+        InlineKeyboardMarkup keyboard = KeyboardUtil.getPaginationKeyboard(recipes, categoryName, page, recipePage.getTotalPages());
+
+        if (messageId != null) {
+            // Редактируем существующее сообщение
+            telegramBot.editMessage(chatId, messageId, messageText, keyboard);
+        } else {
+            // Отправляем новое сообщение (при первом просмотре)
+            telegramBot.sendMessageWithKeyboard(chatId, messageText, keyboard);
+        }
+    }
+
+    private String formatRecipeText(Recipe recipe, int index) {
+        return String.format(
+                "<b>%d. Retsept nomi:</b> %s\n\n" +
+                        "<b>Tavsif:</b> %s\n\n" +
+                        "<b>Masalliqlar:</b> %s\n\n" +
+                        "<b>Tayyorlanishi:</b> %s\n\n" +
+                        "<i>Muallif: %s</i>\n" +
+                        "────────────────────",
+                index,
+                recipe.getName(),
+                recipe.getDescription(),
+                recipe.getIngredients(),
+                recipe.getInstructions(),
+                recipe.getAuthor().getUserName()
+        );
+    }
+
+//    public void sendSavedRecipes(Long chatId, User user) {
+//        List<Recipe> savedRecipes = user.getSavedRecipes();
+//        if (savedRecipes.isEmpty()) {
+//            telegramBot.sendMessage(chatId, "Sizda saqlangan retseptlar yo'q. Retseptlarni ko'rishda ularni saqlashingiz mumkin.");
+//            return;
+//        }
+//
+//        StringBuilder messageText = new StringBuilder("<b>Sizning saqlangan retseptlaringiz:</b>\n\n");
+//        int index = 1;
+//        for (Recipe recipe : savedRecipes) {
+//            messageText.append(formatRecipeText(recipe, index++)).append("\n\n");
+//        }
+//
+//        telegramBot.sendMessage(chatId, messageText.toString(), true);
+//    }
 
     public void sendCategoriesInlineKeyboard(Long chatId) {
         List<String> categoryNames = categoryRepository.findAll().stream()
@@ -114,43 +221,51 @@ public class RecipeService {
         telegramBot.executeMessage(message);
     }
 
-    public void sendRecipesByCategory(Long chatId, String categoryName) {
-        Optional<Category> categoryOptional = categoryRepository.findByName(categoryName);
-        if (categoryOptional.isEmpty()) {
-            telegramBot.sendMessage(chatId, "Kechirasiz, bunday kategoriya topilmadi.");
-            return;
-        }
-        Category category = categoryOptional.get();
-        List<Recipe> recipes = recipeRepository.findByCategory(category);
+//    public void sendRecipesByCategory(Long chatId, String categoryName, int page, Integer messageId) {
+//        Optional<Category> categoryOptional = categoryRepository.findByName(categoryName);
+//        if (categoryOptional.isEmpty()) {
+//            telegramBot.sendMessage(chatId, "Kechirasiz, bunday kategoriya topilmadi.");
+//            return;
+//        }
+//
+//        Category category = categoryOptional.get();
+//        Page<Recipe> recipePage = recipeRepository.findPageByCategory(
+//                category,
+//                PageRequest.of(page, PAGE_SIZE, Sort.by("id").ascending())
+//        );
+//
+//        List<Recipe> recipes = recipePage.getContent();
+//
+//        if (recipes.isEmpty()) {
+//            telegramBot.sendMessage(chatId, "Afsuski, <b>" + categoryName + "</b> kategoriyasida hozircha retseptlar yo'q.", true);
+//            return;
+//        }
+//
+//        // Формируем текст с рецептами
+//        StringBuilder messageText = new StringBuilder();
+//        int index = 1;
+//        for (Recipe recipe : recipes) {
+//            sendRecipeWithPhoto(chatId, recipe, index++);
+//        }
+//
+//        // Добавляем информацию о странице
+//        messageText.append("Sahifa ").append(page + 1).append(" / ").append(recipePage.getTotalPages());
+//
+//        // Создаем клавиатуру пагинации
+//        InlineKeyboardMarkup keyboard = KeyboardUtil.getPaginationKeyboard(categoryName, page, recipePage.getTotalPages());
+//
+//        if (messageId != null) {
+//            // Редактируем существующее сообщение
+//            telegramBot.editMessage(chatId, messageId, messageText.toString(), keyboard);
+//        } else {
+//            // Отправляем новое сообщение (при первом просмотре)
+//            telegramBot.sendMessageWithKeyboard(chatId, messageText.toString(), keyboard);
+//        }
+//    }
 
-        if (recipes.isEmpty()) {
-            telegramBot.sendMessage(chatId, "Afsuski, <b>" + categoryName + "</b> kategoriyasida hozircha retseptlar yo'q.", true);
-            return;
-        }
-
-        for (Recipe recipe : recipes) {
-            String recipeText = String.format(
-                    "<b>Retsept nomi:</b> %s\n\n" +
-                            "<b>Tavsif:</b> %s\n\n" +
-                            "<b>Masalliqlar:</b> %s\n\n" +
-                            "<b>Tayyorlanishi:</b> %s\n\n" +
-                            "<i>Muallif: %s</i>",
-                    recipe.getName(),
-                    recipe.getDescription(),
-                    recipe.getIngredients(),
-                    recipe.getInstructions(),
-                    recipe.getAuthor().getUserName()
-            );
-            SendMessage message = new SendMessage(String.valueOf(chatId), recipeText);
-            message.enableHtml(true);
-            message.setReplyMarkup(KeyboardUtil.getRecipeActionInlineKeyboard(recipe.getId(), recipe.getAuthor().getId()));
-            telegramBot.executeMessage(message);
-        }
-    }
     public void startAddRecipeFlow(Long chatId, User user) {
         user.setBotState(BotState.ADDING_RECIPE_NAME);
         userRepository.save(user);
-
         telegramBot.sendMessage(chatId, "Yangi retsept qo'shishni boshlaymiz!\n\nRetsept nomini kiriting:");
     }
 
@@ -274,17 +389,54 @@ public class RecipeService {
 
     public void handleRecipeCategory(Long chatId, String categoryName,User user){
 
+        user.setBotState(BotState.ADDING_RECIPE_PHOTO);
+        userRepository.save(user);
         Optional<Category> categoryRepositoryByName = categoryRepository.findByName(categoryName);
         if (categoryRepositoryByName.isEmpty()) {
             telegramBot.sendMessage(chatId, "Xatolik: Retseptni aniqlab bo'lmadi.");
         }
         category = categoryRepositoryByName.get();
-        user.setBotState(BotState.ADDING_RECIPE_INSTRUCTIONS);
-        userRepository.save(user);
 //        telegramBot.executeMessage(message);
-        telegramBot.sendMessage(chatId, "Tayyorlash bosqichlarini kiriting (har bir bosqichni yangi qatordan yozing):");
+        telegramBot.sendMessage(chatId, "Rasm kiriting");
     }
 
+    public void handleRecipePhotoRequest(Long chatId, Update update, User user) {
+        if (update.getMessage().hasPhoto()) {
+            // Получаем самое большое доступное фото
+            PhotoSize photo = update.getMessage().getPhoto().stream()
+                    .max(Comparator.comparing(PhotoSize::getFileSize))
+                    .orElse(null);
+
+            if (photo != null) {
+                String fileId = photo.getFileId();
+                handleRecipePhoto(chatId, fileId, user);
+            } else {
+                telegramBot.sendMessage(chatId, "Fotosuratni tushunib bo'lmadi. Iltimos, qayta yuboring.");
+            }
+        } else {
+            telegramBot.sendMessage(chatId, "Iltimos, retsept uchun fotosurat yuboring!");
+        }
+    }
+
+    public void handleRecipePhoto(Long chatId, String fileId, User user) {
+        try {
+            byte[] fileContent = telegramBot.downloadFileBytes(fileId);
+
+            Attachment attachment = new Attachment();
+            attachment.setUrl(fileId);
+            attachment.setFile(fileContent);
+            attachmentRepository.save(attachment);
+            this.recipePhoto = attachment;
+
+            user.setBotState(BotState.ADDING_RECIPE_INSTRUCTIONS);
+            userRepository.save(user);
+            telegramBot.sendMessage(chatId, "Rasm yuklandi! Endi instrukciyalarni kiriting");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            telegramBot.sendMessage(chatId, "Rasm yuklanmadi! Yana urinib koring");
+        }
+    }
 
     public void handleRecipeInstructions(Long chatId, String instructions, User user) {
 //        Long currentRecipeId = user.getCurrentRecipeId();
@@ -320,6 +472,7 @@ public class RecipeService {
         recipe.setInstructions(instructions);
         recipe.setAuthor(savedUser);
         recipe.setCategory(category);
+        recipe.setAttachment(recipePhoto);
         recipeRepository.save(recipe);
 
         telegramBot.sendMessage(chatId, "🎉 Retsept muvaffaqiyatli qo'shildi! Endi uni Retseplar ko'rish bo'limidan topishingiz mumkin.");
@@ -414,19 +567,9 @@ public class RecipeService {
         }
 
         telegramBot.sendMessage(chatId, "<b>Sizning saqlangan retseptlaringiz:</b>\n", true);
+        int index = 1;
         for (Recipe recipe : savedRecipes) {
-            String recipeText = String.format(
-                    "<b>Retsept nomi:</b> %s\n\n" +
-                            "<b>Tavsif:</b> %s\n\n" +
-                            "<i>Muallif: %s</i>",
-                    recipe.getName(),
-                    recipe.getDescription(),
-                    recipe.getAuthor().getUserName()
-            );
-            SendMessage message = new SendMessage(String.valueOf(chatId), recipeText);
-            message.enableHtml(true);
-            message.setReplyMarkup(KeyboardUtil.getRecipeActionInlineKeyboard(recipe.getId(), recipe.getAuthor().getId()));
-            telegramBot.executeMessage(message);
+            sendRecipeWithPhoto(chatId, recipe, index++);
         }
     }
 }

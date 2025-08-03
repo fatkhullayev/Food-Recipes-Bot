@@ -15,6 +15,10 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long> {
     List<Recipe> findByAuthorId(Long authorId);
 
     @Query("SELECT r FROM Recipe r WHERE r.category = :category ORDER BY r.id")
+    Page<Recipe> findPageByCategory(@Param("category") Category category, Pageable pageable);
+
+
+    @Query("SELECT r FROM Recipe r WHERE r.category = :category ORDER BY r.id")
     Page<Recipe> findByCategory(@Param("category") Category category, Pageable pageable);
 
     @Query("SELECT r FROM Recipe r ORDER BY r.id")
