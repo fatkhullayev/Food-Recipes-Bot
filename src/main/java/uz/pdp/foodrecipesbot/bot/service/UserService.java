@@ -21,7 +21,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
-@RequiredArgsConstructor // Constructor injection uchun
+@RequiredArgsConstructor
 @Transactional
 public class UserService {
 
@@ -37,7 +37,7 @@ public class UserService {
                     User newUser = User.builder()
                             .telegramId(telegramId)
                             .userName(userName)
-                            .botState(BotState.START) // Boshlang'ich holat
+                            .botState(BotState.START)
                             .build();
                     return userRepository.save(newUser);
                 });
@@ -94,7 +94,7 @@ public class UserService {
         for (User followedUser : followingUsers) {
             List<Recipe> newRecipes = recipeRepository.findByAuthorId(followedUser.getId());
             newRecipes.stream()
-                    .filter(recipe -> recipe.getCreatedAt().isAfter(LocalDateTime.now().minusDays(1))) // Oxirgi 24 soat ichidagilarni filterlaymiz
+                    .filter(recipe -> recipe.getCreatedAt().isAfter(LocalDateTime.now().minusDays(1)))
                     .forEach(recipe -> {
                         notificationText.append(String.format("📢 %s da Oshpaz <b>%s</b> yangi retsept tayyorladi: <b>%s</b>\n",
                                 recipe.getCreatedAt().format(formatter),

@@ -1,5 +1,3 @@
-// src/main/java/uz/pdp/foodrecipesbot/bot/tgBot/TelegramBot.java
-
 package uz.pdp.foodrecipesbot.bot.tgBot;
 
 import lombok.Getter;
@@ -74,8 +72,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-
-
     private void handleMessage(Update update) {
         Long chatId = update.getMessage().getChatId();
         String messageText = update.getMessage().getText();
@@ -84,7 +80,6 @@ public class TelegramBot extends TelegramLongPollingBot {
             handleContact(update);
             return;
         }
-
 
         User user = userService.getOrCreateUser(chatId, update.getMessage().getFrom().getFirstName());
 
@@ -119,7 +114,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                 break;
             case WAITING_FOR_COMMENT:
                 recipeService.saveComment(chatId, messageText, user);
-                // Comment saqlangandan keyin holatni MAIN_MENU ga o'tkazish va menyuni ko'rsatish
                 user.setBotState(BotState.MAIN_MENU);
                 userService.saveUser(user);
                 sendMainMenu(chatId);
@@ -189,8 +183,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-
-
     private void handleCallbackQuery(Update update) {
 
         Long chatId = update.getCallbackQuery().getMessage().getChatId();
@@ -200,14 +192,12 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (callbackData.startsWith("CAT_")) {
             String categoryName = callbackData.substring(4);
             recipeService.sendRecipesByCategory(chatId, categoryName, 0); // Начинаем с первой страницы
-        }
-        else if (callbackData.startsWith("PAGE_")) {
+        } else if (callbackData.startsWith("PAGE_")) {
             String[] parts = callbackData.split("_");
             String categoryName = parts[1];
             int page = Integer.parseInt(parts[2]);
             recipeService.sendRecipesByCategory(chatId, categoryName, page);
-        }
-        else if (callbackData.equals("BACK_TO_CATEGORIES")) {
+        } else if (callbackData.equals("BACK_TO_CATEGORIES")) {
             recipeService.sendCategoriesInlineKeyboard(chatId);
         } else if (callbackData.startsWith("RECIPE_COMMENT_")) {
             Long recipeId = Long.parseLong(callbackData.substring("RECIPE_COMMENT_".length()));
@@ -219,8 +209,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             Long recipeAuthorId = Long.parseLong(callbackData.substring("RECIPE_FOLLOW_AUTHOR_".length()));
             userService.followUser(user, recipeAuthorId);
             sendMessage(chatId, "Muallifga obuna bo'ldingiz! 🎉");
-        }
-        else if (callbackData.startsWith("RECIPE_SAVE_")) {
+        } else if (callbackData.startsWith("RECIPE_SAVE_")) {
             Long recipeId = Long.parseLong(callbackData.substring("RECIPE_SAVE_".length()));
             recipeService.saveRecipeForUser(chatId, user, recipeId);
         }
@@ -244,6 +233,4 @@ public class TelegramBot extends TelegramLongPollingBot {
             log.error("Xabar yuborishda xato: " + e.getMessage());
         }
     }
-
-
 }

@@ -1,5 +1,3 @@
-// src/main/java/uz/pdp/foodrecipesbot/bot/models/entity/User.java
-
 package uz.pdp.foodrecipesbot.bot.models.entity;
 
 import jakarta.persistence.*;
@@ -23,7 +21,6 @@ public class User {
     private Long telegramId;
 
     private String userName;
-    private String uname;
     private String phoneNumber;
     private String bio;
 

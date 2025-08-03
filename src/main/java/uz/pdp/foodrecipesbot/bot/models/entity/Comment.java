@@ -1,5 +1,3 @@
-// src/main/java/uz/pdp/foodrecipesbot/bot/models/entity/Comment.java
-
 package uz.pdp.foodrecipesbot.bot.models.entity;
 
 import jakarta.persistence.*;

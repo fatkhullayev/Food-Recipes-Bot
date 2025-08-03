@@ -382,7 +382,6 @@ public class RecipeService {
         for (Comment comment : comments) {
             commentsText.append(String.format("<b>%s</b> (@%s): %s\n",
                     comment.getUser().getUserName(),
-                    comment.getUser().getUname() != null ? comment.getUser().getUname() : "no_usepdp rname",
                     comment.getText()));
             commentsText.append("<i>").append(comment.getCreatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))).append("</i>\n\n");
         }

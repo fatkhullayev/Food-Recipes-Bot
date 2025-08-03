@@ -1,5 +1,3 @@
-// src/main/java/uz/pdp/foodrecipesbot/bot/util/KeyboardUtil.java
-
 package uz.pdp.foodrecipesbot.bot.util;
 
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -58,7 +56,6 @@ public class KeyboardUtil {
 
         List<InlineKeyboardButton> paginationRow = new ArrayList<>();
 
-        // Кнопка "Назад"
         if (currentPage > 0) {
             paginationRow.add(InlineKeyboardButton.builder()
                     .text("⬅️ Oldingi")
@@ -66,7 +63,6 @@ public class KeyboardUtil {
                     .build());
         }
 
-        // Кнопка "Вперед"
         if (currentPage < totalPages - 1) {
             paginationRow.add(InlineKeyboardButton.builder()
                     .text("Keyingi ➡️")
@@ -78,7 +74,6 @@ public class KeyboardUtil {
             rows.add(paginationRow);
         }
 
-        // Кнопка возврата к категориям
         rows.add(Collections.singletonList(
                 InlineKeyboardButton.builder()
                         .text("🔙 Kategoriyalarga qaytish")
