@@ -112,16 +112,27 @@ public class RecipeService {
                 telegramBot.sendPhoto(
                         chatId,
                         recipe.getAttachment().getFile(),
-                        recipe.getName() + " retsepti"
+                        ""
                 );
             } catch (Exception e) {
                 e.printStackTrace();
-//                .error("Error sending photo: ", e);
             }
         }
 
         // Затем отправляем текст рецепта
-        String recipeText = formatRecipeText(recipe, index);
+        String recipeText = String.format(
+                "<b>Retsept nomi:</b> %s\n\n" +
+                        "<b>Tavsif:</b> %s\n\n" +
+                        "<b>Masalliqlar:</b> %s\n\n" +
+                        "<b>Tayyorlanishi:</b> %s\n\n" +
+                        "<i>Muallif: %s</i>",
+                recipe.getName(),
+                recipe.getDescription(),
+                recipe.getIngredients(),
+                recipe.getInstructions(),
+                recipe.getAuthor().getUserName()
+        );
+
         SendMessage message = new SendMessage(String.valueOf(chatId), recipeText);
         message.enableHtml(true);
         message.setReplyMarkup(KeyboardUtil.getRecipeActionInlineKeyboard(recipe.getId(), recipe.getAuthor().getId()));
@@ -148,25 +159,19 @@ public class RecipeService {
             return;
         }
 
-        // Формируем текст со всеми рецептами на странице
-        StringBuilder messageText = new StringBuilder();
-        int index = 1;
-        for (Recipe recipe : recipes) {
-            messageText.append(formatRecipeText(recipe, index++)).append("\n\n");
-        }
+        // Формируем текст с информацией о странице
+        String messageText = "<b>" + categoryName + "</b> kategoriyasidagi retseptlar:\n\n";
+        messageText += "Sahifa " + (page + 1) + " / " + recipePage.getTotalPages();
 
-        // Добавляем информацию о странице
-        messageText.append("Sahifa ").append(page + 1).append(" / ").append(recipePage.getTotalPages());
-
-        // Создаем клавиатуру пагинации
-        InlineKeyboardMarkup keyboard = KeyboardUtil.getPaginationKeyboard(categoryName, page, recipePage.getTotalPages());
+        // Создаем клавиатуру с названиями рецептов и пагинацией
+        InlineKeyboardMarkup keyboard = KeyboardUtil.getPaginationKeyboard(recipes, categoryName, page, recipePage.getTotalPages());
 
         if (messageId != null) {
             // Редактируем существующее сообщение
-            telegramBot.editMessage(chatId, messageId, messageText.toString(), keyboard);
+            telegramBot.editMessage(chatId, messageId, messageText, keyboard);
         } else {
             // Отправляем новое сообщение (при первом просмотре)
-            telegramBot.sendMessageWithKeyboard(chatId, messageText.toString(), keyboard);
+            telegramBot.sendMessageWithKeyboard(chatId, messageText, keyboard);
         }
     }
 
@@ -425,11 +430,11 @@ public class RecipeService {
 
             user.setBotState(BotState.ADDING_RECIPE_INSTRUCTIONS);
             userRepository.save(user);
-            telegramBot.sendMessage(chatId, "Фото успешно загружено! Теперь введите инструкции:");
+            telegramBot.sendMessage(chatId, "Rasm yuklandi! Endi instrukciyalarni kiriting");
 
         } catch (Exception e) {
             e.printStackTrace();
-            telegramBot.sendMessage(chatId, "Ошибка загрузки фото. Попробуйте еще раз.");
+            telegramBot.sendMessage(chatId, "Rasm yuklanmadi! Yana urinib koring");
         }
     }
 

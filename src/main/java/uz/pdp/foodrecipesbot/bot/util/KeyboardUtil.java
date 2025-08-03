@@ -8,6 +8,7 @@
     import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
     import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
     import uz.pdp.foodrecipesbot.bot.models.entity.Category;
+    import uz.pdp.foodrecipesbot.bot.models.entity.Recipe;
 
     import java.util.ArrayList;
     import java.util.Collections;
@@ -52,36 +53,44 @@
             return keyboardMarkup;
         }
 
-        public static InlineKeyboardMarkup getPaginationKeyboard(String categoryName, int currentPage, int totalPages) {
+        public static InlineKeyboardMarkup getPaginationKeyboard(List<Recipe> recipes, String categoryName, int currentPage, int totalPages) {
             InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
             List<List<InlineKeyboardButton>> rows = new ArrayList<>();
 
-            List<InlineKeyboardButton> row = new ArrayList<>();
+            // Добавляем кнопки с названиями рецептов
+            for (int i = 0; i < recipes.size(); i++) {
+                Recipe recipe = recipes.get(i);
+                rows.add(Collections.singletonList(
+                        InlineKeyboardButton.builder()
+                                .text((i + 1) + ". " + recipe.getName())
+                                .callbackData("RECIPE_DETAIL_" + recipe.getId())
+                                .build()
+                ));
+            }
 
-            // Кнопка "Назад"
+            // Добавляем кнопки навигации
+            List<InlineKeyboardButton> navRow = new ArrayList<>();
             if (currentPage > 0) {
-                row.add(InlineKeyboardButton.builder()
+                navRow.add(InlineKeyboardButton.builder()
                         .text("⬅️ Oldingi")
                         .callbackData("PAGE_" + categoryName + "_" + (currentPage - 1))
                         .build());
             }
 
-            // Индикатор страницы (если нужно)
-            row.add(InlineKeyboardButton.builder()
+            navRow.add(InlineKeyboardButton.builder()
                     .text((currentPage + 1) + "/" + totalPages)
                     .callbackData("NO_ACTION")
                     .build());
 
-            // Кнопка "Вперед"
             if (currentPage < totalPages - 1) {
-                row.add(InlineKeyboardButton.builder()
+                navRow.add(InlineKeyboardButton.builder()
                         .text("Keyingi ➡️")
                         .callbackData("PAGE_" + categoryName + "_" + (currentPage + 1))
                         .build());
             }
 
-            if (!row.isEmpty()) {
-                rows.add(row);
+            if (!navRow.isEmpty()) {
+                rows.add(navRow);
             }
 
             // Кнопка возврата к категориям
@@ -144,4 +153,5 @@
             markupInline.setKeyboard(rowsInline);
             return markupInline;
         }
+
     }

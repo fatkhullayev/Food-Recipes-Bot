@@ -23,8 +23,10 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 import uz.pdp.foodrecipesbot.bot.models.entity.Category;
+import uz.pdp.foodrecipesbot.bot.models.entity.Recipe;
 import uz.pdp.foodrecipesbot.bot.models.enums.BotState; // To'g'ri paketni import qiling
 import uz.pdp.foodrecipesbot.bot.repository.CategoryRepository;
+import uz.pdp.foodrecipesbot.bot.repository.RecipeRepository;
 import uz.pdp.foodrecipesbot.bot.service.UserService;
 import uz.pdp.foodrecipesbot.bot.service.RecipeService;
 import uz.pdp.foodrecipesbot.bot.util.KeyboardUtil;
@@ -38,6 +40,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Component
@@ -46,6 +49,7 @@ import java.util.List;
 @Lazy
 public class TelegramBot extends TelegramLongPollingBot {
     private final CategoryRepository categoryRepository;
+    private final RecipeRepository recipeRepository;
 
     @Value("${telegram.bot.username}")
     private String botUsername;
@@ -57,10 +61,11 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final @Lazy RecipeService recipeService;
 
     public TelegramBot(UserService userService, RecipeService recipeService,
-                       CategoryRepository categoryRepository) {
+                       CategoryRepository categoryRepository, RecipeRepository recipeRepository) {
         this.userService = userService;
         this.recipeService = recipeService;
         this.categoryRepository = categoryRepository;
+        this.recipeRepository = recipeRepository;
     }
 
     @EventListener(ContextRefreshedEvent.class)
@@ -273,6 +278,16 @@ public class TelegramBot extends TelegramLongPollingBot {
         else if (callbackData.startsWith("RECIPE_SAVE_")) {
             Long recipeId = Long.parseLong(callbackData.substring("RECIPE_SAVE_".length()));
             recipeService.saveRecipeForUser(chatId, user, recipeId);
+        }
+        else if (callbackData.startsWith("RECIPE_DETAIL_")) {
+            Long recipeId = Long.parseLong(callbackData.substring("RECIPE_DETAIL_".length()));
+            Optional<Recipe> recipeOptional = recipeRepository.findById(recipeId);
+            if (recipeOptional.isPresent()) {
+                Recipe recipe = recipeOptional.get();
+                recipeService.sendRecipeWithPhoto(chatId, recipe, 1); // 1 - индекс не важен в этом случае
+            } else {
+                sendMessage(chatId, "Kechirasiz, retsept topilmadi.");
+            }
         }
     }
 
