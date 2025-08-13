@@ -1,6 +1,5 @@
-// src/main/java/uz/pdp/foodrecipesbot/bot/service/UserService.java
-
 package uz.pdp.foodrecipesbot.bot.service;
+
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +13,7 @@ import uz.pdp.foodrecipesbot.bot.models.entity.User;
 import uz.pdp.foodrecipesbot.bot.models.enums.BotState;
 import uz.pdp.foodrecipesbot.bot.repository.UserRepository;
 import uz.pdp.foodrecipesbot.bot.repository.RecipeRepository;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -30,6 +30,7 @@ public class UserService {
     @Lazy
     private TelegramBot telegramBot;
     private final RecipeRepository recipeRepository;
+
 
     public User getOrCreateUser(Long telegramId, String userName) {
         return userRepository.findByTelegramId(telegramId)

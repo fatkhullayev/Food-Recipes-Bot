@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.w3c.dom.Text;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -23,13 +24,13 @@ public class Recipe {
     @Column(nullable = false)
     private String name;
 
-//    @Column(nullable = true)
+    @Column(columnDefinition = "TEXT")
     private String ingredients;
 
-//    @Column(nullable = true)
+    @Column(columnDefinition = "TEXT")
     private String description;
 
-//    @Column(nullable = true)
+    @Column(columnDefinition = "TEXT")
     private String instructions;
 
     @ManyToOne

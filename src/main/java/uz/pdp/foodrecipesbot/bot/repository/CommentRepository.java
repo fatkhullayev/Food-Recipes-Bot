@@ -7,5 +7,7 @@ import uz.pdp.foodrecipesbot.bot.models.entity.Recipe;
 import java.util.List;
 
 public interface CommentRepository extends JpaRepository<Comment, Long> {
+
     List<Comment> findByRecipe(Recipe recipe);
+
 }
